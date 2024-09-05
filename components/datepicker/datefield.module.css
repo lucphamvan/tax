@@ -1,0 +1,26 @@
+.segment {
+  padding: 0.125rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  outline: none;
+  cursor: default;
+  border-radius: 4px;
+  font-weight: 500;
+  color: #ad7f58;
+}
+
+.segment:focus {
+  background-color: #ad8058ec;
+  color: white;
+}
+
+.wrapper {
+  width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+}

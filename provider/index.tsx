@@ -12,7 +12,7 @@ const Provider = ({ children }: ProviderProps) => {
   return (
     <QueryClientProvider client={queryClient}>
       <Theme
-        accentColor="grass"
+        accentColor="brown"
         grayColor="gray"
         panelBackground="solid"
         scaling="100%"
