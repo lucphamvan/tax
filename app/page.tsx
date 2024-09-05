@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/datepicker/datepicker";
 import { Card } from "@/core/card";
 import { getInvoiceData } from "@/service/invoice";
 import { Box, Button, Flex, Progress, Text } from "@radix-ui/themes";
@@ -58,7 +59,17 @@ export default function Home() {
 						<Box>
 							<Text>Từ ngày</Text>
 							<Box>
-								<input style={{ width: "100%" }} type="date" />
+								<input
+									style={{
+										width: "100%",
+										padding: "0.5rem 0.5rem",
+										borderWidth: "1px",
+										borderColor: "gray",
+										borderRadius: "4px",
+									}}
+									type="date"
+									lang="vi"
+								/>
 							</Box>
 						</Box>
 						<Box>
@@ -71,6 +82,7 @@ export default function Home() {
 							Lấy dữ liệu
 						</Button>
 						{disable && <Progress value={Number(percent)} />}
+						<DatePicker label="Chọn ngày" />
 					</Flex>
 				</Card>
 			</Box>
