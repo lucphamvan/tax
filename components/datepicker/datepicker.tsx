@@ -30,11 +30,13 @@ const DatePicker: React.FC<DatePickerProps> = (props) => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-      <div {...labelProps}>{props.label}</div>
+      <div {...labelProps} className="mb-1 text-sm">
+        {props.label}
+      </div>
       <div
         {...groupProps}
         ref={ref}
-        className="flex gap-1 items-center border-[#AD7F58] border rounded-md"
+        className="flex gap-1 items-center border-[#AD7F58] border rounded-[4px]"
       >
         <DateField {...fieldProps} />
         <CalendarButton {...buttonProps}>

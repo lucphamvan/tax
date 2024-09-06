@@ -6,7 +6,7 @@ interface Props extends CardProps {
 
 export const Card = ({ children, ...props }: Props) => {
   return (
-    <div {...props} className={style.kucard}>
+    <div {...props} className={`${style.kucard} ${props.className}`}>
       {children}
     </div>
   );

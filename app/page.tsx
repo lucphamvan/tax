@@ -38,9 +38,10 @@ export default function Home() {
       justify="center"
       align="center"
     >
-      <Box maxWidth="400px" minWidth="300px">
-        <Card size="3">
-          <Flex direction="column" gap="4">
+      <Box>
+        <Card size="3" className="px-5 py-4">
+          <Flex direction="column" gap="4" className="min-w-[320px]">
+            <Heading size="5">Lấy dữ liệu hóa đơn</Heading>
             <Box>
               <DatePicker
                 onChange={(date) => {
@@ -49,8 +50,7 @@ export default function Home() {
                 label="Từ ngày"
               />
             </Box>
-
-            <Box>
+            <Box className="mb-3">
               <DatePicker
                 onChange={(date) => setToDate(date)}
                 label="Đến ngày"

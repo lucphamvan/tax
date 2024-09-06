@@ -1,17 +1,17 @@
 .segment {
   padding: 0.125rem;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
   outline: none;
   cursor: default;
-  border-radius: 4px;
+  border-radius: 2px;
   font-weight: 500;
   color: #ad7f58;
 }
 
 .segment:focus {
-  background-color: #ad8058ec;
+  background-color: #ad80586c;
   color: white;
+  cursor: text;
+  behavior: initial;
 }
 
 .wrapper {

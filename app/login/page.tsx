@@ -8,6 +8,7 @@ import {
   Box,
   Heading,
   Grid,
+  AlertDialog,
 } from "@radix-ui/themes";
 import { useQuery } from "@tanstack/react-query";
 import { getCaptcha } from "@/service/captcha";
@@ -15,6 +16,7 @@ import { AuthenInput } from "@/types/captcha";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Card } from "@/core/card";
+import { useRef, useState } from "react";
 
 type LoginRequest = {
   username: string;
@@ -35,6 +37,8 @@ const LoginPage = () => {
     queryFn: getCaptcha,
     refetchOnWindowFocus: false,
   });
+  const ref = useRef<any>(null);
+  const [alertMessage, setAlertMessage] = useState<string>("");
 
   const onSubmit: SubmitHandler<LoginRequest> = async (request) => {
     try {
@@ -47,7 +51,8 @@ const LoginPage = () => {
       await axios.post("/api/login", authenInput);
       router.push("/");
     } catch (error: any) {
-      alert("Đăng nhập thất bại : " + error.response.data.message);
+      setAlertMessage(error.response?.data?.message);
+      ref.current?.click();
     }
   };
 
@@ -107,6 +112,24 @@ const LoginPage = () => {
           </form>
         </Card>
       </Box>
+      <AlertDialog.Root>
+        <AlertDialog.Trigger>
+          <Button ref={ref} color="red" style={{ display: "none" }}></Button>
+        </AlertDialog.Trigger>
+        <AlertDialog.Content maxWidth="450px">
+          <AlertDialog.Title className="text-red-400">Đăng nhập thất bại</AlertDialog.Title>
+          <AlertDialog.Description size="2">
+            {alertMessage}
+          </AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Action>
+              <Button variant="solid" style={{ cursor: "pointer" }} color="red">
+                OK
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </Flex>
   );
 };
