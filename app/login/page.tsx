@@ -6,12 +6,13 @@ import { AuthenInput } from '@/types/captcha'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 
-import { useRef, useState } from 'react'
-import { Button, Stack, TextField, Typography, Card, Container, Box, Grid2 as Grid, Icon } from '@mui/material'
+import { useState } from 'react'
+import { Button, Stack, TextField, Typography, Container, Box, Grid2 as Grid } from '@mui/material'
 import Image from 'next/image'
 import refreshIcon from '@/img/refresh.svg'
 import { DiUnitySmall } from 'react-icons/di'
 import ErrorDialog from '@/components/error-dialog'
+import PasswordField from '@/components/password'
 
 type LoginRequest = {
     username: string
@@ -55,6 +56,7 @@ const LoginPage = () => {
             router.push('/')
         } catch (error: any) {
             handleOpenDialog(error.response?.data?.message)
+            refreshCatpcha()
         }
     }
 
@@ -87,20 +89,20 @@ const LoginPage = () => {
                                 <Grid>
                                     <Stack spacing={4}>
                                         <Grid container spacing={2}>
-                                            <Grid>
-                                                <TextField sx={{ minWidth: '250px' }} id="username" label="Tên đăng nhập" {...register('username')} />
+                                            <Grid size={{ sm: 12, md: 6, xs: 12 }}>
+                                                <TextField fullWidth sx={{ minWidth: '250px' }} label="Tên đăng nhập" {...register('username')} />
                                             </Grid>
-                                            <Grid>
-                                                <TextField sx={{ minWidth: '250px' }} type="password" label="Mật khẩu" id="password" {...register('password')} />
+                                            <Grid size={{ sm: 12, md: 6, xs: 12 }}>
+                                                <PasswordField label="Mật khẩu" name="password" register={register} />
                                             </Grid>
                                         </Grid>
-                                        <Grid container spacing={2}>
-                                            <Grid alignItems="center" display="flex" bgcolor="#DCDCDC" borderRadius="4px" position="relative" minWidth={250}>
+                                        <Grid container spacing={2} style={{ width: '100%' }}>
+                                            <Grid size={{ sm: 12, md: 6, xs: 12 }} alignItems="center" display="flex" bgcolor="#DCDCDC" borderRadius="4px" position="relative" minWidth={250}>
                                                 <Box dangerouslySetInnerHTML={{ __html: data?.content || '' }} style={{ width: 'auto' }} />
                                                 <Image src={refreshIcon} alt="refresh" width={24} style={{ cursor: 'pointer', position: 'absolute', right: 10 }} onClick={refreshCatpcha} />
                                             </Grid>
-                                            <Grid>
-                                                <TextField sx={{ minWidth: '250px' }} id="captcha" {...register('captcha')} label="Nhập mã captcha" />
+                                            <Grid size={{ sm: 12, md: 6, xs: 12 }}>
+                                                <TextField fullWidth sx={{ minWidth: '250px' }} id="captcha" {...register('captcha')} label="Nhập mã captcha" />
                                             </Grid>
                                         </Grid>
                                     </Stack>

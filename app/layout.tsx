@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import theme from '@/provider/theme'
 import Provider from '@/provider'
+
 import './globals.css'
 
 export default function RootLayout(props: { children: React.ReactNode }) {
