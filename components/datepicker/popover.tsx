@@ -30,7 +30,8 @@ const Popover: React.FC<PopoverProps> = ({ children, state, ...props }) => {
           border: "1px solid #C4A488",
           borderRadius: "4px",
           margin: "10px auto",
-		  width: "fit-content",
+          width: "fit-content",
+          overflow: "auto",
         }}
       >
         <DismissButton onDismiss={state.close} />
