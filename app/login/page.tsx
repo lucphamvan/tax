@@ -86,17 +86,21 @@ const LoginPage = () => {
                                 </Grid>
                                 <Grid>
                                     <Stack spacing={4}>
-                                        <Stack direction="row" spacing={2}>
-                                            <TextField id="username" label="Tên đăng nhập" {...register('username')} />
-                                            <TextField type="password" label="Mật khẩu" id="password" {...register('password')} />
-                                        </Stack>
                                         <Grid container spacing={2}>
-                                            <Grid size={6} alignItems="center" display="flex" bgcolor="#DCDCDC" borderRadius="4px" pr="6px">
-                                                <Box dangerouslySetInnerHTML={{ __html: data?.content || '' }} style={{ width: '100%' }} />
-                                                <Image src={refreshIcon} alt="refresh" width={24} style={{ cursor: 'pointer' }} onClick={refreshCatpcha} />
+                                            <Grid>
+                                                <TextField sx={{ minWidth: '250px' }} id="username" label="Tên đăng nhập" {...register('username')} />
                                             </Grid>
-                                            <Grid size={6}>
-                                                <TextField id="captcha" {...register('captcha')} label="Nhập mã captcha" />
+                                            <Grid>
+                                                <TextField sx={{ minWidth: '250px' }} type="password" label="Mật khẩu" id="password" {...register('password')} />
+                                            </Grid>
+                                        </Grid>
+                                        <Grid container spacing={2}>
+                                            <Grid alignItems="center" display="flex" bgcolor="#DCDCDC" borderRadius="4px" position="relative" minWidth={250}>
+                                                <Box dangerouslySetInnerHTML={{ __html: data?.content || '' }} style={{ width: 'auto' }} />
+                                                <Image src={refreshIcon} alt="refresh" width={24} style={{ cursor: 'pointer', position: 'absolute', right: 10 }} onClick={refreshCatpcha} />
+                                            </Grid>
+                                            <Grid>
+                                                <TextField sx={{ minWidth: '250px' }} id="captcha" {...register('captcha')} label="Nhập mã captcha" />
                                             </Grid>
                                         </Grid>
                                     </Stack>
