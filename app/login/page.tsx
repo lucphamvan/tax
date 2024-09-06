@@ -13,6 +13,7 @@ import refreshIcon from '@/img/refresh.svg'
 import { DiUnitySmall } from 'react-icons/di'
 import ErrorDialog from '@/components/error-dialog'
 import PasswordField from '@/components/password'
+import Cookies from 'js-cookie'
 
 type LoginRequest = {
     username: string
@@ -43,6 +44,11 @@ const LoginPage = () => {
         setDialogOpen(false)
     }
 
+    const clearSession = () => {
+        Cookies.remove('username')
+        Cookies.remove('token')
+    }
+
     // hanlde login
     const onLogin: SubmitHandler<LoginRequest> = async (request) => {
         try {
@@ -52,9 +58,11 @@ const LoginPage = () => {
                 cvalue: request.captcha,
                 ckey: data?.key || '',
             }
+            Cookies.set('username', request.username)
             await axios.post('/api/login', authenInput)
             router.push('/')
         } catch (error: any) {
+            clearSession()
             handleOpenDialog(error.response?.data?.message)
             refreshCatpcha()
         }
