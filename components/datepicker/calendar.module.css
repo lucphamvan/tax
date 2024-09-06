@@ -1,11 +1,11 @@
 .selected {
-  background-color: #ad7f58;
-  border-radius: 100%;
-  color: white;
+    background-color: #ad7f58;
+    border-radius: 100%;
+    color: white;
 }
 
 .cell:hover {
-  background-color: #997657e1;
-  border-radius: 100%;
-  color: white;
+    background-color: #997657e1;
+    border-radius: 100%;
+    color: white;
 }

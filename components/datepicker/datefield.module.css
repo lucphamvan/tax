@@ -1,26 +1,26 @@
 .segment {
-  padding: 0.125rem;
-  outline: none;
-  cursor: default;
-  border-radius: 2px;
-  font-weight: 500;
-  color: #ad7f58;
+    padding: 0.125rem;
+    outline: none;
+    cursor: default;
+    border-radius: 2px;
+    font-weight: 500;
+    color: #ad7f58;
 }
 
 .segment:focus {
-  background-color: #ad80586c;
-  color: white;
-  cursor: text;
-  behavior: initial;
+    background-color: #ad80586c;
+    color: white;
+    cursor: text;
+    behavior: initial;
 }
 
 .wrapper {
-  width: 100%;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+    width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .field {
-  display: flex;
-  align-items: center;
+    display: flex;
+    align-items: center;
 }

@@ -1,136 +1,118 @@
-"use client";
-import { useForm, SubmitHandler } from "react-hook-form";
-import {
-  Button,
-  TextField,
-  Text,
-  Flex,
-  Box,
-  Heading,
-  Grid,
-  AlertDialog,
-} from "@radix-ui/themes";
-import { useQuery } from "@tanstack/react-query";
-import { getCaptcha } from "@/service/captcha";
-import { AuthenInput } from "@/types/captcha";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { Card } from "@/core/card";
-import { useRef, useState } from "react";
+'use client'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
+import { getCaptcha } from '@/service/captcha'
+import { AuthenInput } from '@/types/captcha'
+import { useRouter } from 'next/navigation'
+import axios from 'axios'
+
+import { useRef, useState } from 'react'
+import { Button, Stack, TextField, Typography, Card, Container, Box, Grid2 as Grid, Icon } from '@mui/material'
+import Image from 'next/image'
+import refreshIcon from '@/img/refresh.svg'
+import { DiUnitySmall } from 'react-icons/di'
+import ErrorDialog from '@/components/error-dialog'
 
 type LoginRequest = {
-  username: string;
-  password: string;
-  captcha: string;
-};
+    username: string
+    password: string
+    captcha: string
+}
 
 const LoginPage = () => {
-  const {
-    handleSubmit,
-    register,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginRequest>();
+    const router = useRouter()
 
-  const router = useRouter();
-  const { data, refetch } = useQuery({
-    queryKey: ["captcha"],
-    queryFn: getCaptcha,
-    refetchOnWindowFocus: false,
-  });
-  const ref = useRef<any>(null);
-  const [alertMessage, setAlertMessage] = useState<string>("");
+    const {
+        handleSubmit,
+        register,
+        formState: { isSubmitting },
+    } = useForm<LoginRequest>()
 
-  const onSubmit: SubmitHandler<LoginRequest> = async (request) => {
-    try {
-      const authenInput: AuthenInput = {
-        username: request.username,
-        password: request.password,
-        cvalue: request.captcha,
-        ckey: data?.key || "",
-      };
-      await axios.post("/api/login", authenInput);
-      router.push("/");
-    } catch (error: any) {
-      setAlertMessage(error.response?.data?.message);
-      ref.current?.click();
+    const { data, refetch } = useQuery({ queryKey: ['captcha'], queryFn: getCaptcha, refetchOnWindowFocus: false })
+
+    const [isDialogOpen, setDialogOpen] = useState<boolean>(false)
+    const [errorMessage, setErrorMessage] = useState<string>('')
+
+    const handleOpenDialog = (message: string) => {
+        setErrorMessage(message)
+        setDialogOpen(true)
     }
-  };
 
-  return (
-    <Flex
-      height="100vh"
-      width="100%"
-      direction="column"
-      justify="center"
-      align="center"
-    >
-      <Box width="30%" minWidth="300px" maxWidth="400px">
-        <Card size="3">
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Flex gap="4" direction="column">
-              <Heading>Đăng Nhập</Heading>
-              <Box>
-                <Text as="label" htmlFor="username">
-                  Tên đăng nhập
-                </Text>
-                <TextField.Root id="username" {...register("username")} />
-              </Box>
-              <Box>
-                <Text as="label" htmlFor="password">
-                  Mật khẩu
-                </Text>
-                <TextField.Root
-                  type="password"
-                  id="password"
-                  {...register("password")}
-                />
-              </Box>
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: data?.content || "",
-                }}
-                style={{ width: "100%", height: "auto" }}
-              />
-              <Grid columns="2" width="auto" gap="3" align="center">
-                <TextField.Root
-                  id="captcha"
-                  {...register("captcha")}
-                  placeholder="captcha"
-                />
-                <Button type="button" onClick={() => refetch()}>
-                  Lấy lại captcha
-                </Button>
-              </Grid>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                style={{ cursor: "pointer" }}
-              >
-                Đăng nhập
-              </Button>
-            </Flex>
-          </form>
-        </Card>
-      </Box>
-      <AlertDialog.Root>
-        <AlertDialog.Trigger>
-          <Button ref={ref} color="red" style={{ display: "none" }}></Button>
-        </AlertDialog.Trigger>
-        <AlertDialog.Content maxWidth="450px">
-          <AlertDialog.Title className="text-red-400">Đăng nhập thất bại</AlertDialog.Title>
-          <AlertDialog.Description size="2">
-            {alertMessage}
-          </AlertDialog.Description>
-          <Flex gap="3" mt="4" justify="end">
-            <AlertDialog.Action>
-              <Button variant="solid" style={{ cursor: "pointer" }} color="red">
-                OK
-              </Button>
-            </AlertDialog.Action>
-          </Flex>
-        </AlertDialog.Content>
-      </AlertDialog.Root>
-    </Flex>
-  );
-};
-export default LoginPage;
+    const handleCloseDialog = () => {
+        setDialogOpen(false)
+    }
+
+    // hanlde login
+    const onLogin: SubmitHandler<LoginRequest> = async (request) => {
+        try {
+            const authenInput: AuthenInput = {
+                username: request.username,
+                password: request.password,
+                cvalue: request.captcha,
+                ckey: data?.key || '',
+            }
+            await axios.post('/api/login', authenInput)
+            router.push('/')
+        } catch (error: any) {
+            handleOpenDialog(error.response?.data?.message)
+        }
+    }
+
+    // refresh captcha
+    const refreshCatpcha = () => {
+        refetch()
+    }
+
+    return (
+        <Container
+            sx={{
+                display: 'flex',
+                height: '100vh',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+            }}
+        >
+            <Box sx={{ minWidth: '400px', padding: '2rem', borderRadius: '1rem', bgcolor: 'white' }}>
+                <form onSubmit={handleSubmit(onLogin)}>
+                    <Stack spacing={4}>
+                        <Box>
+                            <DiUnitySmall size={48} color="#1976D2" />
+                            <Grid container spacing={10}>
+                                <Grid display="flex" flexDirection="column">
+                                    <Typography variant="h4" textAlign="center">
+                                        Đăng nhập
+                                    </Typography>
+                                </Grid>
+                                <Grid>
+                                    <Stack spacing={4}>
+                                        <Stack direction="row" spacing={2}>
+                                            <TextField id="username" label="Tên đăng nhập" {...register('username')} />
+                                            <TextField type="password" label="Mật khẩu" id="password" {...register('password')} />
+                                        </Stack>
+                                        <Grid container spacing={2}>
+                                            <Grid size={6} alignItems="center" display="flex" bgcolor="#DCDCDC" borderRadius="4px" pr="6px">
+                                                <Box dangerouslySetInnerHTML={{ __html: data?.content || '' }} style={{ width: '100%' }} />
+                                                <Image src={refreshIcon} alt="refresh" width={24} style={{ cursor: 'pointer' }} onClick={refreshCatpcha} />
+                                            </Grid>
+                                            <Grid size={6}>
+                                                <TextField id="captcha" {...register('captcha')} label="Nhập mã captcha" />
+                                            </Grid>
+                                        </Grid>
+                                    </Stack>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                        <Stack direction="row" justifyContent="flex-end" spacing={2}>
+                            <Button size="large" variant="contained" type="submit" disabled={isSubmitting} sx={{ textTransform: 'none' }}>
+                                Đăng nhập
+                            </Button>
+                        </Stack>
+                    </Stack>
+                </form>
+            </Box>
+            <ErrorDialog open={isDialogOpen} onClose={handleCloseDialog} message={errorMessage} />
+        </Container>
+    )
+}
+export default LoginPage
