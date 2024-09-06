@@ -1,50 +1,37 @@
+import dayjs from 'dayjs'
+
 const XLSX = require('xlsx')
 
 // get date from DD-MM-YYYY
-export const getFromDate = (dateString: string) => {
+export const getStartDate = (dateString: string) => {
     const [day, month, year] = dateString.split('-')
     return `${day}/${month}/${year}T00:00:00`
 }
 
-export const getToDate = (dateString: string) => {
+export const getEndDate = (dateString: string) => {
     const [day, month, year] = dateString.split('-')
     return `${day}/${month}/${year}T23:59:59`
 }
 
-export function parseCSV(csv: string) {
-    const result = []
-    let current = ''
-    let inQuotes = false
+function convertDateString(dateString: string) {
+    // Split the date and time components
+    const [datePart, timePart] = dateString.split('T')
 
-    for (let i = 0; i < csv.length; i++) {
-        const char = csv[i]
+    // Reformat the date part from dd/MM/yyyy to yyyy-MM-dd
+    const [day, month, year] = datePart.split('/')
+    const reformattedDateString = `${year}-${month}-${day}T${timePart}`
 
-        if (char === '"') {
-            // Toggle the inQuotes flag
-            inQuotes = !inQuotes
-        } else if (char === ',' && !inQuotes) {
-            // Push the current value to result and reset it
-            result.push(current.trim())
-            current = ''
-        } else {
-            // Append the current character to the current value
-            current += char
-        }
-    }
-
-    // Add the last value
-    if (current.length > 0) {
-        result.push(current.trim())
-    }
-
-    return result
+    // Create and return a new Date object
+    return new Date(reformattedDateString)
 }
 
-export const buildAndDownloadFile = (csv: string, from: string, to: string) => {
+export const buildAndDownloadFile = (csv: string, startDate: string, endDate: string) => {
     const ws = XLSX.utils.aoa_to_sheet(csv.split('\n').map((row) => parseCSV(row)))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
-    const filename = `dulieu_${from}_${to}.xlsx`
+    const start = dayjs(convertDateString(startDate)).format('DD_MM_YYYY')
+    const end = dayjs(convertDateString(endDate)).format('DD_MM_YYYY')
+    const filename = `dulieu_${start}__${end}.xlsx`
     XLSX.writeFile(wb, filename)
 }
 
@@ -71,10 +58,31 @@ export function downloadTextFile(textContent: string, from: string, to: string) 
     document.body.removeChild(link)
 }
 
-export function formatDate(date?: Date) {
-    if (!date) return ''
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0') // getMonth() returns month index starting from 0
-    const year = date.getFullYear()
-    return `${day}-${month}-${year}`
+function parseCSV(csv: string) {
+    const result = []
+    let current = ''
+    let inQuotes = false
+
+    for (let i = 0; i < csv.length; i++) {
+        const char = csv[i]
+
+        if (char === '"') {
+            // Toggle the inQuotes flag
+            inQuotes = !inQuotes
+        } else if (char === ',' && !inQuotes) {
+            // Push the current value to result and reset it
+            result.push(current.trim())
+            current = ''
+        } else {
+            // Append the current character to the current value
+            current += char
+        }
+    }
+
+    // Add the last value
+    if (current.length > 0) {
+        result.push(current.trim())
+    }
+
+    return result
 }

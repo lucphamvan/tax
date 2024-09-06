@@ -1,7 +1,6 @@
 'use client'
-import Cookies from 'js-cookie'
 import { getInvoiceData } from '@/service/invoice'
-import { formatDate, buildAndDownloadFile } from '@/utils'
+import { buildAndDownloadFile, getStartDate, getEndDate } from '@/utils'
 import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps } from '@mui/material'
 import { useState } from 'react'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -22,27 +21,31 @@ export default function Home() {
         setOpen(true)
     }
     // handle download data
-    const getData = () => {
-        const from = formatDate(fromDate?.toDate())
-        const to = formatDate(toDate?.toDate())
+    const getData = async () => {
+        const startDate = getStartDate(fromDate?.format('DD-MM-YYYY') || '')
+        const endDate = getEndDate(toDate?.format('DD-MM-YYYY') || '')
 
-        const token = Cookies.get('token') || ''
+        if (!startDate || !endDate) {
+            handleError('Vui lòng chọn ngày')
+            return
+        }
+
         setDisableGetData(true)
-        getInvoiceData(token, from, to, setPercent)
-            .then((content) => {
-                setPercent('0')
-                if (content) {
-                    buildAndDownloadFile(content || '', from, to)
-                } else {
-                    handleError('Không có dữ liệu')
-                }
-            })
-            .catch((error: any) => {
-                handleError(error.response?.data?.message)
-            })
-            .finally(() => {
-                setDisableGetData(false)
-            })
+        try {
+            const content = await getInvoiceData(startDate, endDate, setPercent)
+            setPercent('0')
+
+            if (content) {
+                buildAndDownloadFile(content || '', startDate, endDate)
+            } else {
+                handleError('Không có dữ liệu')
+            }
+        } catch (error: any) {
+            console.log(error)
+            handleError(error.response?.data?.message)
+        } finally {
+            setDisableGetData(false)
+        }
     }
 
     return (

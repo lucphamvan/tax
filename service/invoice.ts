@@ -1,16 +1,14 @@
 import axios from 'axios'
-import { getFromDate, getToDate } from '@/utils'
-
+import Cookies from 'js-cookie'
+import { getStartDate, getEndDate } from '@/utils'
 import { GetInvoicesParams, GetListInvoiceResponse, InvoiceDetail, InvoiceData, GetDetailParams, HdHhdv } from '@/types/invoice'
 
 const GET_LIST_INVOICE_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/sold'
 const GET_DETAIL_INVOICE_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/detail'
 const ROW_PER_PAGE = 50
 
-const getInvoicesParams = async (from: string, to: string, state?: string) => {
-    const fromDate = getFromDate(from)
-    const toDate = getToDate(to)
-    const search = `tdlap=ge=${fromDate};tdlap=le=${toDate}`
+const getInvoicesParams = async (startDate: string, endDate: string, state?: string) => {
+    const search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
     const params: GetInvoicesParams = {
         sort: 'tdlap:desc,khmshdon:asc,shdon:desc',
         size: ROW_PER_PAGE,
@@ -50,7 +48,8 @@ const buildCSVContent = (data: Partial<InvoiceDetail>) => {
     return rows.join('') + (detailRows || '') + '\n\n\n\n'
 }
 
-const buildDetailInvoiceData = async (invoiceData: InvoiceData, token: string) => {
+const buildDetailInvoiceData = async (invoiceData: InvoiceData) => {
+    const token = Cookies.get('token') || ''
     const params: GetDetailParams = {
         nbmst: invoiceData.nbmst,
         khhdon: invoiceData.khhdon,
@@ -89,8 +88,9 @@ const buildDetailInvoiceData = async (invoiceData: InvoiceData, token: string) =
     return content
 }
 
-const fetchInvoices = async (token: string, from: string, to: string, state?: string) => {
-    const params = await getInvoicesParams(from, to, state)
+const fetchInvoices = async (startDate: string, endDate: string, state?: string) => {
+    const token = Cookies.get('token') || ''
+    const params = await getInvoicesParams(startDate, endDate, state)
     const { data } = await axios.get<GetListInvoiceResponse>(GET_LIST_INVOICE_URL, {
         params,
         headers: {
@@ -102,33 +102,34 @@ const fetchInvoices = async (token: string, from: string, to: string, state?: st
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const retrieveAllInvoices = async (invoices: InvoiceData[], token: string, from: string, to: string, total: number, state?: string): Promise<InvoiceData[]> => {
+const retrieveAllInvoices = async (invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
     if (invoices.length === 0 || invoices.length >= total) {
         return invoices
     }
 
-    const { datas, state: newState } = await fetchInvoices(token, from, to, state)
+    const { datas, state: newState } = await fetchInvoices(startDate, endDate, state)
     invoices.push(...datas)
 
-    await delay(1000)
-    return retrieveAllInvoices(invoices, token, from, to, total, newState)
+    await delay(1000) // delay 1s to avoid request limit
+
+    return retrieveAllInvoices(invoices, startDate, endDate, total, newState)
 }
 
-const getAllInvoices = async (from: string, to: string, token: string): Promise<InvoiceData[]> => {
+const getAllInvoices = async (startDate: string, endDate: string): Promise<InvoiceData[]> => {
     const invoices: InvoiceData[] = []
-    const { datas, total, state } = await fetchInvoices(token, from, to)
+    const { datas, total, state } = await fetchInvoices(startDate, endDate)
     invoices.push(...datas)
-    return retrieveAllInvoices(invoices, token, from, to, total, state)
+    return retrieveAllInvoices(invoices, startDate, endDate, total, state)
 }
 
-export const getInvoiceData = async (token: string, from: string, to: string, fn: (p: string) => void) => {
-    const invoices = await getAllInvoices(from, to, token)
+export const getInvoiceData = async (startDate: string, endDate: string, fn: (p: string) => void) => {
+    const invoices = await getAllInvoices(startDate, endDate)
     const total = invoices.length
     let processItem = 0
     try {
         let content = ''
         for (const invoice of invoices) {
-            content += await buildDetailInvoiceData(invoice, token)
+            content += await buildDetailInvoiceData(invoice)
             processItem++
             const percent = (processItem / total) * 100
             fn(percent.toFixed(2))
