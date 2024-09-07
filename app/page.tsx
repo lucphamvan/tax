@@ -2,10 +2,10 @@
 import { getInvoiceData } from '@/service/invoice'
 import { buildAndDownloadFile, getStartDate, getEndDate } from '@/utils'
 import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { DemoContainer, DemoItem } from '@mui/x-date-pickers/internals/demo'
-import { Dayjs } from 'dayjs'
+import dayjs, { Dayjs } from 'dayjs'
 import ErrorDialog from '@/components/error-dialog'
 import Cookies from 'js-cookie'
 import { PiSignOutFill } from 'react-icons/pi'
@@ -19,7 +19,7 @@ export default function Home() {
     const [toDate, setToDate] = useState<Dayjs | null>()
     const [open, setOpen] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
-    const user = Cookies.get('username')
+    const [user, setUser] = useState('')
 
     const handleError = (errMessage: string) => {
         setErrorMessage(errMessage || 'Có lỗi xảy ra')
@@ -60,46 +60,91 @@ export default function Home() {
         router.push('/login')
     }
 
+    useEffect(() => {
+        const userName = Cookies.get('username')
+        setUser(userName || '')
+    }, [])
+
+    const shouldDisableEndDate = (day: Dayjs) => {
+        if (day.isAfter(dayjs())) {
+            return true
+        }
+        if (fromDate) {
+            if (day.isBefore(fromDate)) {
+                return true
+            }
+            if (day.isAfter(fromDate.add(1, 'month'))) {
+                return true
+            }
+        }
+        return false
+    }
+
+    const shouldDisableStartDate = (day: Dayjs) => {
+        if (day.isAfter(dayjs())) {
+            return true
+        }
+        return false
+    }
+
     return (
-        <>
-            <Container
-                sx={{
-                    display: 'flex',
-                    height: '100vh',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}
-            >
-                <Box sx={{ bgcolor: 'white', padding: '2rem', borderRadius: '1rem', position: 'relative' }}>
-                    <Box display="flex" position="absolute" top={-100} left={0} width="100%" alignItems="center" gap={2}>
-                        <Box display="inline-flex" alignItems="center" gap={2}>
-                            <Typography variant="h4" textAlign="center">
-                                Xin chào {user}
-                            </Typography>
-                            |
-                            <PiSignOutFill color="#1976D2" size={32} style={{ cursor: 'pointer' }} onClick={handleLogout} />
-                        </Box>
+        <Container
+            sx={{
+                display: 'flex',
+                height: '100vh',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+            }}
+        >
+            <Box sx={{ bgcolor: 'white', padding: '2rem', borderRadius: '1rem', position: 'relative' }}>
+                <Box display="flex" position="absolute" top={-100} left={0} width="100%" alignItems="center" gap={2}>
+                    <Box display="inline-flex" alignItems="center" gap={2}>
+                        <Typography variant="h4" textAlign="center">
+                            Xin chào {user}
+                        </Typography>
+                        |
+                        <PiSignOutFill color="#1976D2" size={32} style={{ cursor: 'pointer' }} onClick={handleLogout} />
                     </Box>
-                    <Stack spacing={4}>
-                        <Typography variant="h4">Lấy dữ liệu hóa đơn</Typography>
-                        <DemoContainer components={['DatePicker']}>
-                            <DemoItem label="Từ ngày">
-                                <DatePicker format="DD/MM/YYYY" value={fromDate} onChange={(v) => setFromDate(v)} />
-                            </DemoItem>
-                            <DemoItem label="Đến ngày">
-                                <DatePicker format="DD/MM/YYYY" value={toDate} onChange={(v) => setToDate(v)} />
-                            </DemoItem>
-                        </DemoContainer>
-                        <Button disabled={disableGetData} onClick={getData} variant="outlined" size="large">
-                            Lấy dữ liệu
-                        </Button>
-                        {disableGetData && <LinearProgressWithLabel value={Number(percent)} />}
-                    </Stack>
-                    <ErrorDialog open={open} onClose={() => setOpen(false)} message={errorMessage} />
                 </Box>
-            </Container>
-        </>
+                <Stack spacing={4}>
+                    <Typography variant="h4">Lấy dữ liệu hóa đơn</Typography>
+                    <DemoContainer components={['DatePicker']}>
+                        <DemoItem label="Từ ngày">
+                            <DatePicker
+                                slotProps={{
+                                    field: {
+                                        clearable: true,
+                                    },
+                                }}
+                                shouldDisableDate={shouldDisableStartDate}
+                                format="DD/MM/YYYY"
+                                value={fromDate}
+                                onChange={(v) => setFromDate(v)}
+                            />
+                        </DemoItem>
+                        <DemoItem label="Đến ngày">
+                            <DatePicker
+                                slotProps={{
+                                    field: {
+                                        clearable: true,
+                                    },
+                                }}
+                                shouldDisableDate={shouldDisableEndDate}
+                                format="DD/MM/YYYY"
+                                value={toDate}
+                                onChange={(v) => setToDate(v)}
+                            />
+                        </DemoItem>
+                    </DemoContainer>
+                    <Button disabled={disableGetData} onClick={getData} variant="outlined" size="large">
+                        Lấy dữ liệu
+                    </Button>
+                    {disableGetData && <LinearProgressWithLabel value={Number(percent)} />}
+                </Stack>
+                <ErrorDialog open={open} onClose={() => setOpen(false)} message={errorMessage} />
+            </Box>
+        </Container>
     )
 }
 
