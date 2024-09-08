@@ -1,6 +1,5 @@
 'use client'
-import { getInvoiceData } from '@/service/invoice'
-import { buildAndDownloadFile, getStartDate, getEndDate } from '@/utils'
+import { exportXLSXFile, getStartDate, getEndDate } from '@/utils'
 import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -10,6 +9,7 @@ import ErrorDialog from '@/components/error-dialog'
 import Cookies from 'js-cookie'
 import { PiSignOutFill } from 'react-icons/pi'
 import { useRouter } from 'next/navigation'
+import { generateXLSXData } from '@/service/invoice'
 
 export default function Home() {
     const router = useRouter()
@@ -20,6 +20,11 @@ export default function Home() {
     const [open, setOpen] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
     const [user, setUser] = useState('')
+
+    useEffect(() => {
+        const userName = Cookies.get('username')
+        setUser(userName || '')
+    }, [])
 
     const handleError = (errMessage: string) => {
         setErrorMessage(errMessage || 'Có lỗi xảy ra')
@@ -38,11 +43,11 @@ export default function Home() {
 
         setDisableGetData(true)
         try {
-            const content = await getInvoiceData(startDate, endDate, setPercent)
+            const xlsxData = await generateXLSXData(startDate, endDate, setPercent)
             setPercent('0')
 
-            if (content) {
-                buildAndDownloadFile(content || '', startDate, endDate)
+            if (xlsxData?.length) {
+                exportXLSXFile(xlsxData, startDate, endDate)
             } else {
                 handleError('Không có dữ liệu')
             }
@@ -59,11 +64,6 @@ export default function Home() {
         Cookies.remove('username')
         router.push('/login')
     }
-
-    useEffect(() => {
-        const userName = Cookies.get('username')
-        setUser(userName || '')
-    }, [])
 
     const shouldDisableEndDate = (day: Dayjs) => {
         if (day.isAfter(dayjs())) {

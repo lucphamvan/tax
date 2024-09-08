@@ -1,11 +1,12 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
-import { getStartDate, getEndDate } from '@/utils'
 import { GetInvoicesParams, GetListInvoiceResponse, InvoiceDetail, InvoiceData, GetDetailParams, HdHhdv } from '@/types/invoice'
 
 const GET_LIST_INVOICE_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/sold'
 const GET_DETAIL_INVOICE_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/detail'
 const ROW_PER_PAGE = 50
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const getInvoicesParams = async (startDate: string, endDate: string, state?: string) => {
     const search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
@@ -23,32 +24,47 @@ const getInvoicesParams = async (startDate: string, endDate: string, state?: str
 const getTchat = (tchat: number) => {
     switch (tchat) {
         case 1:
-            return `"Hàng hóa, dịch vụ"`
+            return `Hàng hóa, dịch vụ`
         case 3:
-            return `"Chiết khấu thương mại"`
+            return `Chiết khấu thương mại`
         default:
             return tchat.toString()
     }
 }
 
-const buildCSVContent = (data: Partial<InvoiceDetail>) => {
-    const rows = [
-        `Số hóa đơn:,${data.shdon?.toString() || ''},,,,,,\n`,
-        `Ngày cấp:,${data.ncma || ''},,,,,,\n`,
-        `Tổng tiền thuế:,${data.tgtthue?.toString() || ''},,,,,,\n`,
-        `"STT","Tính chất","Tên hàng hóa, dịch vụ","Đơn vị tính","Số lượng","Đơn giá","Chiết khấu","Thuế suất","Thành tiền chưa có thuế GTGT"\n`,
-    ]
-
-    const detailRows = data.hdhhdvu
-        ?.map((item) =>
-            [item.stt.toString(), getTchat(item.tchat), `"${item.ten}"`, item.dvtinh || '', item.sluong?.toString() || '', item.dgia?.toString() || '', item.stckhau || '', item.ltsuat || '', item.thtien?.toString() || ''].join(',')
-        )
-        .join('\n')
-
-    return rows.join('') + (detailRows || '') + '\n\n\n\n'
+const fetchInvoices = async (startDate: string, endDate: string, state?: string) => {
+    const token = Cookies.get('token') || ''
+    const params = await getInvoicesParams(startDate, endDate, state)
+    const { data } = await axios.get<GetListInvoiceResponse>(GET_LIST_INVOICE_URL, {
+        params,
+        headers: {
+            Authorization: 'Bearer ' + token,
+        },
+    })
+    return data
 }
 
-const buildDetailInvoiceData = async (invoiceData: InvoiceData) => {
+const retrieveAllInvoices = async (invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
+    if (invoices.length === 0 || invoices.length >= total) {
+        return invoices
+    }
+
+    const { datas, state: newState } = await fetchInvoices(startDate, endDate, state)
+    invoices.push(...datas)
+
+    await delay(1000) // delay 1s to avoid request limit
+
+    return retrieveAllInvoices(invoices, startDate, endDate, total, newState)
+}
+
+const getAllInvoices = async (startDate: string, endDate: string): Promise<InvoiceData[]> => {
+    const invoices: InvoiceData[] = []
+    const { datas, total, state } = await fetchInvoices(startDate, endDate)
+    invoices.push(...datas)
+    return retrieveAllInvoices(invoices, startDate, endDate, total, state)
+}
+
+const getDetailInvoice = async (invoiceData: InvoiceData) => {
     const token = Cookies.get('token') || ''
     const params: GetDetailParams = {
         nbmst: invoiceData.nbmst,
@@ -83,59 +99,44 @@ const buildDetailInvoiceData = async (invoiceData: InvoiceData) => {
         ncma: ncma,
         tgtthue: data.tgtthue,
         hdhhdvu: hdhhdvu,
+        nbmst: data.nbmst,
     }
-    const content = buildCSVContent(detailData)
-    return content
+    return detailData
 }
 
-const fetchInvoices = async (startDate: string, endDate: string, state?: string) => {
-    const token = Cookies.get('token') || ''
-    const params = await getInvoicesParams(startDate, endDate, state)
-    const { data } = await axios.get<GetListInvoiceResponse>(GET_LIST_INVOICE_URL, {
-        params,
-        headers: {
-            Authorization: 'Bearer ' + token,
-        },
+const generateXLSX1Invoice = (data: Partial<InvoiceDetail>) => {
+    const rows = [
+        [, , , , , , , , , 'Mã số thuế', 'Số hóa đơn', 'Ngày cấp', 'Tổng tiền thuế'],
+        [, , , , , , , , , data.nbmst, data.shdon, data.ncma, data.tgtthue],
+        ['STT', 'Tính chất', 'Tên hàng hóa, dịch vụ', 'Đơn vị tính', 'Số lượng', 'Đơn giá', 'Chiết khấu', 'Thuế suất', 'Thành tiền chưa có thuế GTGT'],
+    ]
+    data.hdhhdvu?.forEach((item) => {
+        const row = [item.stt, getTchat(item.tchat), item.ten, item.dvtinh, item.sluong, item.dgia, item.stckhau, item.ltsuat, item.thtien]
+        rows.push(row)
     })
-    return data
+    rows.push([])
+    rows.push([])
+    rows.push([])
+
+    return rows
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const retrieveAllInvoices = async (invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
-    if (invoices.length === 0 || invoices.length >= total) {
-        return invoices
-    }
-
-    const { datas, state: newState } = await fetchInvoices(startDate, endDate, state)
-    invoices.push(...datas)
-
-    await delay(1000) // delay 1s to avoid request limit
-
-    return retrieveAllInvoices(invoices, startDate, endDate, total, newState)
-}
-
-const getAllInvoices = async (startDate: string, endDate: string): Promise<InvoiceData[]> => {
-    const invoices: InvoiceData[] = []
-    const { datas, total, state } = await fetchInvoices(startDate, endDate)
-    invoices.push(...datas)
-    return retrieveAllInvoices(invoices, startDate, endDate, total, state)
-}
-
-export const getInvoiceData = async (startDate: string, endDate: string, fn: (p: string) => void) => {
+export const generateXLSXData = async (startDate: string, endDate: string, fn: (p: string) => void) => {
     const invoices = await getAllInvoices(startDate, endDate)
     const total = invoices.length
     let processItem = 0
     try {
-        let content = ''
+        let xlsxData = []
         for (const invoice of invoices) {
-            content += await buildDetailInvoiceData(invoice)
+            const data = await getDetailInvoice(invoice)
+            const rows = generateXLSX1Invoice(data)
+            xlsxData.push(...rows)
             processItem++
             const percent = (processItem / total) * 100
             fn(percent.toFixed(2))
             await delay(500)
         }
-        return content
+        return xlsxData
     } catch (error: any) {
         console.log(error.message)
     }

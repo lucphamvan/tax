@@ -1,6 +1,5 @@
 import dayjs from 'dayjs'
-
-const XLSX = require('xlsx')
+import * as XLSX from 'xlsx'
 
 // get date from DD-MM-YYYY
 export const getStartDate = (dateString: string) => {
@@ -25,8 +24,8 @@ function convertDateString(dateString: string) {
     return new Date(reformattedDateString)
 }
 
-export const buildAndDownloadFile = (csv: string, startDate: string, endDate: string) => {
-    const ws = XLSX.utils.aoa_to_sheet(csv.split('\n').map((row) => parseCSV(row)))
+export const exportXLSXFile = (data: any, startDate: string, endDate: string) => {
+    const ws = XLSX.utils.aoa_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
     const start = dayjs(convertDateString(startDate)).format('DD_MM_YYYY')
@@ -56,33 +55,4 @@ export function downloadTextFile(textContent: string, from: string, to: string) 
 
     // Remove the link from the document
     document.body.removeChild(link)
-}
-
-function parseCSV(csv: string) {
-    const result = []
-    let current = ''
-    let inQuotes = false
-
-    for (let i = 0; i < csv.length; i++) {
-        const char = csv[i]
-
-        if (char === '"') {
-            // Toggle the inQuotes flag
-            inQuotes = !inQuotes
-        } else if (char === ',' && !inQuotes) {
-            // Push the current value to result and reset it
-            result.push(current.trim())
-            current = ''
-        } else {
-            // Append the current character to the current value
-            current += char
-        }
-    }
-
-    // Add the last value
-    if (current.length > 0) {
-        result.push(current.trim())
-    }
-
-    return result
 }
