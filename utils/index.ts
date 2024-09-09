@@ -1,3 +1,4 @@
+import { InvoiceType } from '@/service/invoice'
 import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
@@ -24,13 +25,14 @@ function convertDateString(dateString: string) {
     return new Date(reformattedDateString)
 }
 
-export const exportXLSXFile = (data: any, startDate: string, endDate: string) => {
+export const exportXLSXFile = (type: InvoiceType, data: any, startDate: string, endDate: string) => {
     const ws = XLSX.utils.aoa_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
     const start = dayjs(convertDateString(startDate)).format('DD_MM_YYYY')
     const end = dayjs(convertDateString(endDate)).format('DD_MM_YYYY')
-    const filename = `dulieu_${start}__${end}.xlsx`
+    const name = type === 'purchase' ? 'muavao' : 'banra'
+    const filename = `${name}__${start}__${end}.xlsx`
     XLSX.writeFile(wb, filename)
 }
 

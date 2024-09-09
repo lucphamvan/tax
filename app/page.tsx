@@ -9,7 +9,7 @@ import ErrorDialog from '@/components/error-dialog'
 import Cookies from 'js-cookie'
 import { PiSignOutFill } from 'react-icons/pi'
 import { useRouter } from 'next/navigation'
-import { generateXLSXData } from '@/service/invoice'
+import { generateXLSXData, InvoiceType } from '@/service/invoice'
 
 export default function Home() {
     const router = useRouter()
@@ -32,7 +32,7 @@ export default function Home() {
     }
 
     // handle download data
-    const getData = async () => {
+    const getData = async (type: InvoiceType) => {
         const startDate = getStartDate(fromDate?.format('DD-MM-YYYY') || '')
         const endDate = getEndDate(toDate?.format('DD-MM-YYYY') || '')
 
@@ -43,11 +43,11 @@ export default function Home() {
 
         setDisableGetData(true)
         try {
-            const xlsxData = await generateXLSXData(startDate, endDate, setPercent)
+            const xlsxData = await generateXLSXData(type, startDate, endDate, setPercent)
             setPercent('0')
 
             if (xlsxData?.length) {
-                exportXLSXFile(xlsxData, startDate, endDate)
+                exportXLSXFile(type, xlsxData, startDate, endDate)
             } else {
                 handleError('Không có dữ liệu')
             }
@@ -137,8 +137,11 @@ export default function Home() {
                             />
                         </DemoItem>
                     </DemoContainer>
-                    <Button disabled={disableGetData} onClick={getData} variant="outlined" size="large">
-                        Lấy dữ liệu
+                    <Button disabled={disableGetData} onClick={() => getData('purchase')} variant="outlined" size="large">
+                        Lấy dữ liệu mua vào
+                    </Button>
+                    <Button disabled={disableGetData} onClick={() => getData('sold')} variant="outlined" size="large">
+                        Lấy dữ liệu bán ra
                     </Button>
                     {disableGetData && <LinearProgressWithLabel value={Number(percent)} />}
                 </Stack>

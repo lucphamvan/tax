@@ -40,6 +40,7 @@ export interface HdHhdv {
 
 export interface InvoiceDetail {
     nbmst: string
+    nmmst: string
     khmshdon: number
     khhdon: string
     shdon: number
