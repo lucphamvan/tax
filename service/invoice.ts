@@ -28,8 +28,12 @@ const getType = (typeCode: number) => {
     switch (typeCode) {
         case 1:
             return `Hàng hóa, dịch vụ`
+        case 2:
+            return `Khuyến mãi`
         case 3:
             return `Chiết khấu thương mại`
+        case 4:
+            return `Ghi chú, diễn giải`
         default:
             return typeCode.toString()
     }
