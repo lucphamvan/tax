@@ -11,8 +11,11 @@ export type InvoiceType = 'purchase' | 'sold'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getInvoicesParams = async (startDate: string, endDate: string, state?: string) => {
-    const search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
+const getInvoicesParams = async (type: InvoiceType, startDate: string, endDate: string, state?: string) => {
+    let search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
+    if (type === 'purchase') {
+        search += ';ttxly==5'
+    }
     const params: GetInvoicesParams = {
         sort: 'tdlap:desc,khmshdon:asc,shdon:desc',
         size: ROW_PER_PAGE,
@@ -35,14 +38,14 @@ const getType = (typeCode: number) => {
         case 4:
             return `Ghi chú, diễn giải`
         default:
-            return typeCode.toString()
+            return typeCode?.toString()
     }
 }
 
 const fetchInvoices = async (type: InvoiceType, startDate: string, endDate: string, state?: string) => {
     const url = type === 'purchase' ? GET_PURCHASE_INVOICES_URL : GET_SOLD_INVOICES_URL
     const token = Cookies.get('token') || ''
-    const params = await getInvoicesParams(startDate, endDate, state)
+    const params = await getInvoicesParams(type, startDate, endDate, state)
     const { data } = await axios.get<GetListInvoiceResponse>(url, {
         params,
         headers: {
