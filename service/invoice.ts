@@ -11,10 +11,10 @@ export type InvoiceType = 'purchase' | 'sold'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getInvoicesParams = async (type: InvoiceType, startDate: string, endDate: string, state?: string) => {
+const getInvoicesParams = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, state?: string) => {
     let search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
     if (type === 'purchase') {
-        search += ';ttxly==5'
+        search += `;ttxly==${ttxly}`
     }
     const params: GetInvoicesParams = {
         sort: 'tdlap:desc,khmshdon:asc,shdon:desc',
@@ -42,10 +42,10 @@ const getType = (typeCode: number) => {
     }
 }
 
-const fetchInvoices = async (type: InvoiceType, startDate: string, endDate: string, state?: string) => {
+const fetchInvoices = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, state?: string) => {
     const url = type === 'purchase' ? GET_PURCHASE_INVOICES_URL : GET_SOLD_INVOICES_URL
     const token = Cookies.get('token') || ''
-    const params = await getInvoicesParams(type, startDate, endDate, state)
+    const params = await getInvoicesParams(type, ttxly, startDate, endDate, state)
     const { data } = await axios.get<GetListInvoiceResponse>(url, {
         params,
         headers: {
@@ -55,24 +55,24 @@ const fetchInvoices = async (type: InvoiceType, startDate: string, endDate: stri
     return data
 }
 
-const retrieveAllInvoices = async (type: InvoiceType, invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
+const retrieveAllInvoices = async (type: InvoiceType, ttxly: string, invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
     if (invoices.length === 0 || invoices.length >= total) {
         return invoices
     }
 
-    const { datas, state: newState } = await fetchInvoices(type, startDate, endDate, state)
+    const { datas, state: newState } = await fetchInvoices(type, ttxly, startDate, endDate, state)
     invoices.push(...datas)
 
     await delay(1000) // delay 1s to avoid request limit
 
-    return retrieveAllInvoices(type, invoices, startDate, endDate, total, newState)
+    return retrieveAllInvoices(type, ttxly, invoices, startDate, endDate, total, newState)
 }
 
-const getAllInvoices = async (type: InvoiceType, startDate: string, endDate: string): Promise<InvoiceData[]> => {
+const getAllInvoices = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string): Promise<InvoiceData[]> => {
     const invoices: InvoiceData[] = []
-    const { datas, total, state } = await fetchInvoices(type, startDate, endDate)
+    const { datas, total, state } = await fetchInvoices(type, ttxly, startDate, endDate)
     invoices.push(...datas)
-    return retrieveAllInvoices(type, invoices, startDate, endDate, total, state)
+    return retrieveAllInvoices(type, ttxly, invoices, startDate, endDate, total, state)
 }
 
 const getDetailInvoice = async (invoiceData: InvoiceData) => {
@@ -104,7 +104,7 @@ const getDetailInvoice = async (invoiceData: InvoiceData) => {
         }
         return hhdv
     })
-    const ncma = new Date(data.ncma).toLocaleDateString('en-GB')
+    const ncma = new Date(data.ncnhat).toLocaleDateString('en-GB')
     const detailData: Partial<InvoiceDetail> = {
         shdon: data.shdon,
         ncma: ncma,
@@ -112,6 +112,7 @@ const getDetailInvoice = async (invoiceData: InvoiceData) => {
         hdhhdvu: hdhhdvu,
         nbmst: data.nbmst,
         nmmst: data.nmmst,
+        ncnhat: data.ncnhat,
     }
     return detailData
 }
@@ -135,9 +136,9 @@ const generateXLSX1Invoice = (type: InvoiceType, data: Partial<InvoiceDetail>) =
     return rows
 }
 
-export const generateXLSXData = async (type: InvoiceType, startDate: string, endDate: string, fn: (p: string) => void) => {
+export const generateXLSXData = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, fn: (p: string) => void) => {
     console.log('Generating XLSX data...', type)
-    const invoices = await getAllInvoices(type, startDate, endDate)
+    const invoices = await getAllInvoices(type, ttxly, startDate, endDate)
     const total = invoices.length
     let processItem = 0
     try {

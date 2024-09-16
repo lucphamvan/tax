@@ -58,7 +58,9 @@ const LoginPage = () => {
                 cvalue: request.captcha,
                 ckey: data?.key || '',
             }
-            Cookies.set('username', request.username)
+            Cookies.set('username', request.username, {
+                expires: 1,
+            })
             await axios.post('/api/login', authenInput)
             router.push('/')
         } catch (error: any) {
