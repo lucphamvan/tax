@@ -2,12 +2,13 @@ import { GetInvoicesInput, InvoiceKind } from '@/types/invoice'
 import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
-// get date from DD-MM-YYYY
+/** get date from DD-MM-YYYY and convert to DD/MM/YYYYT00:00:00 */
 export const getStartDate = (dateString: string) => {
     const [day, month, year] = dateString.split('-')
     return `${day}/${month}/${year}T00:00:00`
 }
 
+/** get date from DD-MM-YYYY and convert to DD/MM/YYYYT23:59:59 */
 export const getEndDate = (dateString: string) => {
     const [day, month, year] = dateString.split('-')
     return `${day}/${month}/${year}T23:59:59`

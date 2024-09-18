@@ -1,21 +1,21 @@
 'use client'
 import { exportXLSXFile, getStartDate, getEndDate } from '@/utils'
-import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps, FormControl, FormLabel, RadioGroup, FormControlLabel, SelectChangeEvent } from '@mui/material'
+import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps } from '@mui/material'
 import { useEffect, useState } from 'react'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { DemoContainer, DemoItem } from '@mui/x-date-pickers/internals/demo'
+import { DemoContainer } from '@mui/x-date-pickers/internals/demo'
 import dayjs, { Dayjs } from 'dayjs'
 import ErrorDialog from '@/components/error-dialog'
 import Cookies from 'js-cookie'
 import { PiSignOutFill } from 'react-icons/pi'
 import { useRouter } from 'next/navigation'
 import { generateXLSXData } from '@/service/invoice'
-import { InvoiceKind, InvoiceType } from '@/types/invoice'
+import { GetInvoicesInput, InvoiceKind, InvoiceType } from '@/types/invoice'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import RadioForm from '@/components/form/radio'
 import SelectForm from '@/components/form/select'
+import DatePickerForm from '@/components/form/datepicker'
 
 const ttxlyOptions = [
     { value: '5', label: 'Đã cấp mã hóa đơn' },
@@ -36,12 +36,16 @@ type InputSchema = {
     type: InvoiceType
     ttxly: string
     kind: InvoiceKind
+    fromDate: Dayjs
+    toDate: Dayjs
 }
 
 const schema = z.object({
     type: z.enum([invoiceTypeOptions[0].value, invoiceTypeOptions[1].value]),
     ttxly: z.enum([ttxlyOptions[0].value, ttxlyOptions[1].value, ttxlyOptions[2].value]),
     kind: z.nativeEnum(InvoiceKind),
+    fromDate: z.custom<Dayjs>().refine((v) => v, 'Thông tin bắt buộc'),
+    toDate: z.custom<Dayjs>().refine((v) => v, 'Thông tin bắt buộc'),
 })
 
 const initData = {
@@ -53,8 +57,6 @@ const initData = {
 export default function Home() {
     const router = useRouter()
     const [percent, setPercent] = useState('0')
-    const [fromDate, setFromDate] = useState<Dayjs | null>()
-    const [toDate, setToDate] = useState<Dayjs | null>()
     const [open, setOpen] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
     const [user, setUser] = useState('')
@@ -92,24 +94,19 @@ export default function Home() {
 
     // handle download data
     const onSubmit = async (data: InputSchema) => {
-        console.log('data', data)
-        if (!fromDate || !toDate) {
-            handleError('Vui lòng chọn ngày')
-            return
-        }
-        const startDate = getStartDate(fromDate?.format('DD-MM-YYYY') || '')
-        const endDate = getEndDate(toDate?.format('DD-MM-YYYY') || '')
         updateTotalInvoice(0)
+        const startDate = getStartDate(data.fromDate.format('DD-MM-YYYY') || '')
+        const endDate = getEndDate(data.toDate.format('DD-MM-YYYY') || '')
+        const input: GetInvoicesInput = {
+            type: data.type,
+            kind: data.kind,
+            ttxly: data.ttxly,
+            startDate,
+            endDate,
+            updatePercent,
+            updateTotalInvoice,
+        }
         try {
-            const input = {
-                type: data.type,
-                kind: data.kind,
-                ttxly: data.ttxly,
-                startDate,
-                endDate,
-                updatePercent,
-                updateTotalInvoice,
-            }
             const xlsxData = await generateXLSXData(input)
             updatePercent('0')
             if (xlsxData?.length) {
@@ -133,11 +130,11 @@ export default function Home() {
         if (day.isAfter(dayjs())) {
             return true
         }
-        if (fromDate) {
-            if (day.isBefore(fromDate)) {
+        if (watch('fromDate')) {
+            if (day.isBefore(watch('fromDate'))) {
                 return true
             }
-            if (day.isAfter(fromDate.add(1, 'month'))) {
+            if (day.isAfter(watch('fromDate').add(1, 'month'))) {
                 return true
             }
         }
@@ -179,32 +176,8 @@ export default function Home() {
                         {isPurchaseType && <SelectForm name="ttxly" control={control} label="Kết quả kiểm tra" fullWidth items={ttxlyOptions} />}
 
                         <DemoContainer components={['DatePicker']}>
-                            <DemoItem label="Từ ngày">
-                                <DatePicker
-                                    slotProps={{
-                                        field: {
-                                            clearable: true,
-                                        },
-                                    }}
-                                    shouldDisableDate={shouldDisableStartDate}
-                                    format="DD/MM/YYYY"
-                                    value={fromDate}
-                                    onChange={(v) => setFromDate(v)}
-                                />
-                            </DemoItem>
-                            <DemoItem label="Đến ngày">
-                                <DatePicker
-                                    slotProps={{
-                                        field: {
-                                            clearable: true,
-                                        },
-                                    }}
-                                    shouldDisableDate={shouldDisableEndDate}
-                                    format="DD/MM/YYYY"
-                                    value={toDate}
-                                    onChange={(v) => setToDate(v)}
-                                />
-                            </DemoItem>
+                            <DatePickerForm control={control} name="fromDate" label="Từ ngày" shouldDisableDate={shouldDisableStartDate} />
+                            <DatePickerForm control={control} name="toDate" label="Đến ngày" shouldDisableDate={shouldDisableEndDate} />
                         </DemoContainer>
 
                         <RadioForm name="kind" control={control} fullWidth row items={invoiceKindOptions} />
