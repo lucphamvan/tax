@@ -1,3 +1,5 @@
+import { Color } from '@/config/color'
+import { Typography } from '@mui/material'
 import { DatePicker, DatePickerProps } from '@mui/x-date-pickers'
 import { DemoItem } from '@mui/x-date-pickers/internals/demo'
 import { Dayjs } from 'dayjs'
@@ -23,13 +25,14 @@ const DatePickerForm: React.FC<Props> = ({ name, label, defaultValue, control, .
                             {...field}
                             {...props}
                             slotProps={{
-                                field: {
-                                    clearable: true,
+                                field: { clearable: true },
+                                textField: {
+                                    error: !!error,
+                                    helperText: error?.message,
                                 },
                             }}
                             format="DD/MM/YYYY"
                         />
-                        {error && <span style={{ color: 'red' }}>{error.message}</span>}
                     </>
                 )}
             />

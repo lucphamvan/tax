@@ -1,7 +1,6 @@
 'use client'
 import { Inter } from 'next/font/google'
 import { createTheme } from '@mui/material/styles'
-import { viVN } from '@mui/x-date-pickers/locales'
 
 const roboto = Inter({
     weight: ['300', '400', '500', '700'],

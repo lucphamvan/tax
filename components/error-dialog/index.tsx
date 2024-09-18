@@ -18,7 +18,6 @@ interface ErrorDialogProps {
 const ErrorDialog = ({ open, onClose, message, maxWidth = 'sm', fullWidth = true }: ErrorDialogProps) => {
     return (
         <Dialog open={open} onClose={onClose} aria-labelledby="error-dialog-title" aria-describedby="error-dialog-description" maxWidth={maxWidth} fullWidth={fullWidth}>
-            <DialogTitle id="error-dialog-title">Lỗi</DialogTitle>
             <DialogContent>
                 <Typography id="error-dialog-description" variant="body1">
                     {message}
