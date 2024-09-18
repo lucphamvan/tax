@@ -19,6 +19,23 @@ export interface GetListInvoiceResponse {
     total: number
 }
 
+export type InvoiceType = 'purchase' | 'sold'
+export enum InvoiceKind {
+    normal = 1,
+    sco = 2,
+}
+
+export interface GetInvoicesInput {
+    type: InvoiceType
+    kind: InvoiceKind
+    ttxly: string // trinh tu xu ly
+    startDate: string
+    endDate: string
+    state?: string
+    updatePercent?: (data: string) => void
+    updateTotalInvoice?: (total: number) => void
+}
+
 export interface InvoiceData {
     nbmst: string
     khhdon: string

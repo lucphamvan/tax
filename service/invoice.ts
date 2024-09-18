@@ -1,26 +1,47 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
-import { GetInvoicesParams, GetListInvoiceResponse, InvoiceDetail, InvoiceData, GetDetailParams, HdHhdv } from '@/types/invoice'
+import { GetInvoicesParams, GetListInvoiceResponse, InvoiceDetail, InvoiceData, GetDetailParams, HdHhdv, InvoiceType, GetInvoicesInput, InvoiceKind } from '@/types/invoice'
 
-const GET_SOLD_INVOICES_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/sold'
-const GET_PURCHASE_INVOICES_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/purchase'
-const GET_DETAIL_INVOICE_URL = 'https://hoadondientu.gdt.gov.vn:30000/query/invoices/detail'
+const BASE_URL = 'https://hoadondientu.gdt.gov.vn:30000'
 const ROW_PER_PAGE = 50
 
-export type InvoiceType = 'purchase' | 'sold'
+const getURL = (type: InvoiceType, kind: InvoiceKind) => {
+    let url = BASE_URL
+    if (kind === InvoiceKind.sco) {
+        url += '/sco-query/invoices'
+    } else {
+        url += '/query/invoices'
+    }
+    url += `/${type}`
+    return url
+}
+
+const getDetailURL = (kind: InvoiceKind) => {
+    let url = BASE_URL
+    if (kind === InvoiceKind.sco) {
+        url += '/sco-query/invoices/detail'
+    } else {
+        url += '/query/invoices/detail'
+    }
+    return url
+}
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getInvoicesParams = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, state?: string) => {
+const getInvoicesParams = async (input: GetInvoicesInput) => {
+    const { startDate, endDate, type, state, ttxly } = input
+
     let search = `tdlap=ge=${startDate};tdlap=le=${endDate}`
     if (type === 'purchase') {
         search += `;ttxly==${ttxly}`
     }
+
     const params: GetInvoicesParams = {
         sort: 'tdlap:desc,khmshdon:asc,shdon:desc',
         size: ROW_PER_PAGE,
         search,
     }
+
     if (state) {
         params.state = state
     }
@@ -42,10 +63,10 @@ const getType = (typeCode: number) => {
     }
 }
 
-const fetchInvoices = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, state?: string) => {
-    const url = type === 'purchase' ? GET_PURCHASE_INVOICES_URL : GET_SOLD_INVOICES_URL
+const fetchInvoices = async (input: GetInvoicesInput) => {
+    const url = getURL(input.type, input.kind)
     const token = Cookies.get('token') || ''
-    const params = await getInvoicesParams(type, ttxly, startDate, endDate, state)
+    const params = await getInvoicesParams(input)
     const { data } = await axios.get<GetListInvoiceResponse>(url, {
         params,
         headers: {
@@ -55,27 +76,30 @@ const fetchInvoices = async (type: InvoiceType, ttxly: string, startDate: string
     return data
 }
 
-const retrieveAllInvoices = async (type: InvoiceType, ttxly: string, invoices: InvoiceData[], startDate: string, endDate: string, total: number, state?: string): Promise<InvoiceData[]> => {
+const retrieveAllInvoices = async (invoices: InvoiceData[], total: number, input: GetInvoicesInput): Promise<InvoiceData[]> => {
     if (invoices.length === 0 || invoices.length >= total) {
         return invoices
     }
-
-    const { datas, state: newState } = await fetchInvoices(type, ttxly, startDate, endDate, state)
+    const { datas, state } = await fetchInvoices(input)
     invoices.push(...datas)
+    input.state = state
 
-    await delay(1000) // delay 1s to avoid request limit
+    // prevent request limit
+    await delay(1000)
 
-    return retrieveAllInvoices(type, ttxly, invoices, startDate, endDate, total, newState)
+    return retrieveAllInvoices(invoices, total, input)
 }
 
-const getAllInvoices = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string): Promise<InvoiceData[]> => {
+const getAllInvoices = async (input: GetInvoicesInput): Promise<InvoiceData[]> => {
     const invoices: InvoiceData[] = []
-    const { datas, total, state } = await fetchInvoices(type, ttxly, startDate, endDate)
+    const { datas, total, state } = await fetchInvoices(input)
     invoices.push(...datas)
-    return retrieveAllInvoices(type, ttxly, invoices, startDate, endDate, total, state)
+    input.state = state
+    input.updateTotalInvoice?.(total)
+    return retrieveAllInvoices(invoices, total, input)
 }
 
-const getDetailInvoice = async (invoiceData: InvoiceData) => {
+const getDetailInvoice = async (invoiceData: InvoiceData, invoiceKind: InvoiceKind) => {
     const token = Cookies.get('token') || ''
     const params: GetDetailParams = {
         nbmst: invoiceData.nbmst,
@@ -83,7 +107,8 @@ const getDetailInvoice = async (invoiceData: InvoiceData) => {
         khmshdon: invoiceData.khmshdon,
         shdon: invoiceData.shdon,
     }
-    const response = await axios.get(GET_DETAIL_INVOICE_URL, {
+    const url = getDetailURL(invoiceKind)
+    const response = await axios.get(url, {
         params,
         headers: {
             Authorization: 'Bearer ' + token,
@@ -136,20 +161,20 @@ const generateXLSX1Invoice = (type: InvoiceType, data: Partial<InvoiceDetail>) =
     return rows
 }
 
-export const generateXLSXData = async (type: InvoiceType, ttxly: string, startDate: string, endDate: string, fn: (p: string) => void) => {
-    console.log('Generating XLSX data...', type)
-    const invoices = await getAllInvoices(type, ttxly, startDate, endDate)
+export const generateXLSXData = async (input: GetInvoicesInput) => {
+    const { type, updatePercent } = input
+    const invoices = await getAllInvoices(input)
     const total = invoices.length
     let processItem = 0
     try {
         let xlsxData = []
         for (const invoice of invoices) {
-            const data = await getDetailInvoice(invoice)
+            const data = await getDetailInvoice(invoice, input.kind)
             const rows = generateXLSX1Invoice(type, data)
             xlsxData.push(...rows)
             processItem++
             const percent = (processItem / total) * 100
-            fn(percent.toFixed(2))
+            updatePercent?.(percent.toFixed(2))
             await delay(500)
         }
         return xlsxData

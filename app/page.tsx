@@ -9,9 +9,10 @@ import ErrorDialog from '@/components/error-dialog'
 import Cookies from 'js-cookie'
 import { PiSignOutFill } from 'react-icons/pi'
 import { useRouter } from 'next/navigation'
-import { generateXLSXData, InvoiceType } from '@/service/invoice'
+import { generateXLSXData } from '@/service/invoice'
+import { InvoiceKind, InvoiceType } from '@/types/invoice'
 
-const checkTypeMap = {
+const ttxlyMap = {
     first: {
         value: '5',
         label: 'Đã cấp mã hóa đơn',
@@ -36,12 +37,22 @@ export default function Home() {
     const [errorMessage, setErrorMessage] = useState('')
     const [user, setUser] = useState('')
     const [invoiceType, setInvoiceType] = useState<InvoiceType>('sold')
-    const [checkType, setCheckType] = useState<string>(checkTypeMap.first.value)
+    const [ttxly, setTtxly] = useState<string>(ttxlyMap.first.value)
+    const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>(InvoiceKind.normal)
+    const [totalInvoice, setTotalInvoice] = useState(0)
 
     useEffect(() => {
         const userName = Cookies.get('username')
         setUser(userName || '')
     }, [])
+
+    const updatePercent = (p: string) => {
+        setPercent(p)
+    }
+
+    const updateTotalInvoice = (total: number) => {
+        setTotalInvoice(total)
+    }
 
     const handleError = (errMessage: string) => {
         setErrorMessage(errMessage || 'Có lỗi xảy ra')
@@ -49,7 +60,7 @@ export default function Home() {
     }
 
     // handle download data
-    const getData = async (type: InvoiceType) => {
+    const getData = async (invoiceType: InvoiceType) => {
         if (!fromDate || !toDate) {
             handleError('Vui lòng chọn ngày')
             return
@@ -57,12 +68,21 @@ export default function Home() {
         const startDate = getStartDate(fromDate?.format('DD-MM-YYYY') || '')
         const endDate = getEndDate(toDate?.format('DD-MM-YYYY') || '')
         setDisableGetData(true)
+        updateTotalInvoice(0)
         try {
-            const xlsxData = await generateXLSXData(type, checkType, startDate, endDate, setPercent)
-            setPercent('0')
-
+            const input = {
+                type: invoiceType,
+                kind: invoiceKind,
+                ttxly,
+                startDate,
+                endDate,
+                updatePercent,
+                updateTotalInvoice,
+            }
+            const xlsxData = await generateXLSXData(input)
+            updatePercent('0')
             if (xlsxData?.length) {
-                exportXLSXFile(type, xlsxData, startDate, endDate)
+                exportXLSXFile(xlsxData, input)
             } else {
                 handleError('Không có dữ liệu')
             }
@@ -107,7 +127,11 @@ export default function Home() {
     }
 
     const handleChangeCheckType = (event: SelectChangeEvent): any => {
-        setCheckType(event.target.value)
+        setTtxly(event.target.value)
+    }
+
+    const handleChangeInvoiceKind = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setInvoiceKind(Number(event.target.value) as InvoiceKind)
     }
 
     const handleGetData = () => {
@@ -136,6 +160,7 @@ export default function Home() {
                 </Box>
                 <Stack spacing={4}>
                     <Typography variant="h4">Lấy dữ liệu hóa đơn</Typography>
+
                     <FormControl>
                         <FormLabel id="invoice-type">Loại hóa đơn</FormLabel>
                         <RadioGroup row aria-labelledby="invoice-type" name="invoice-type" value={invoiceType} onChange={handleChangeInvoiceType}>
@@ -143,16 +168,18 @@ export default function Home() {
                             <FormControlLabel value="purchase" control={<Radio />} label="Mua vào" />
                         </RadioGroup>
                     </FormControl>
+
                     {invoiceType === 'purchase' && (
                         <FormControl fullWidth>
                             <InputLabel id="check-type">Kết quả kiểm tra</InputLabel>
-                            <Select labelId="check-type" id="check-type" value={checkType} label="Kết quả kiểm tra" onChange={handleChangeCheckType}>
-                                <MenuItem value={checkTypeMap.first.value}>{checkTypeMap.first.label}</MenuItem>
-                                <MenuItem value={checkTypeMap.second.value}>{checkTypeMap.second.label}</MenuItem>
-                                <MenuItem value={checkTypeMap.third.value}>{checkTypeMap.third.label}</MenuItem>
+                            <Select labelId="check-type" id="check-type" value={ttxly} label="Kết quả kiểm tra" onChange={handleChangeCheckType}>
+                                <MenuItem value={ttxlyMap.first.value}>{ttxlyMap.first.label}</MenuItem>
+                                <MenuItem value={ttxlyMap.second.value}>{ttxlyMap.second.label}</MenuItem>
+                                <MenuItem value={ttxlyMap.third.value}>{ttxlyMap.third.label}</MenuItem>
                             </Select>
                         </FormControl>
                     )}
+
                     <DemoContainer components={['DatePicker']}>
                         <DemoItem label="Từ ngày">
                             <DatePicker
@@ -181,10 +208,21 @@ export default function Home() {
                             />
                         </DemoItem>
                     </DemoContainer>
+
+                    <RadioGroup row aria-labelledby="invoice-kind" name="invoice-kind" value={invoiceKind} onChange={handleChangeInvoiceKind}>
+                        <FormControlLabel value={InvoiceKind.normal} control={<Radio />} label="Hóa đơn điện tử" />
+                        <FormControlLabel value={InvoiceKind.sco} control={<Radio />} label="Hóa đơn có mã khởi tạo từ máy tính tiền" />
+                    </RadioGroup>
+
                     <Button disabled={disableGetData} onClick={handleGetData} variant="outlined" size="large">
                         Lấy dữ liệu
                     </Button>
                     {disableGetData && <LinearProgressWithLabel value={Number(percent)} />}
+                    {totalInvoice > 0 && (
+                        <Typography variant="body2" color="textSecondary">
+                            Tổng số hóa đơn: {totalInvoice}
+                        </Typography>
+                    )}
                 </Stack>
                 <ErrorDialog open={open} onClose={() => setOpen(false)} message={errorMessage} />
             </Box>
