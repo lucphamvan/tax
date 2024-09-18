@@ -21,8 +21,8 @@ export interface GetListInvoiceResponse {
 
 export type InvoiceType = 'purchase' | 'sold'
 export enum InvoiceKind {
-    normal = 1,
-    sco = 2,
+    normal = '1',
+    sco = '2',
 }
 
 export interface GetInvoicesInput {

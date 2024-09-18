@@ -1,6 +1,6 @@
 'use client'
 import { exportXLSXFile, getStartDate, getEndDate } from '@/utils'
-import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material'
+import { Box, Button, Container, Typography, LinearProgress, Stack, LinearProgressProps, FormControl, FormLabel, RadioGroup, FormControlLabel, SelectChangeEvent } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { DemoContainer, DemoItem } from '@mui/x-date-pickers/internals/demo'
@@ -11,35 +11,66 @@ import { PiSignOutFill } from 'react-icons/pi'
 import { useRouter } from 'next/navigation'
 import { generateXLSXData } from '@/service/invoice'
 import { InvoiceKind, InvoiceType } from '@/types/invoice'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import RadioForm from '@/components/form/radio'
+import SelectForm from '@/components/form/select'
 
-const ttxlyMap = {
-    first: {
-        value: '5',
-        label: 'Đã cấp mã hóa đơn',
-    },
-    second: {
-        value: '6',
-        label: 'Tổng cục thuế đã nhận không mã',
-    },
-    third: {
-        value: '8',
-        label: 'Tổng cục thuế đã nhận hóa đơn có mã khởi tạo từ máy tính tiền',
-    },
+const ttxlyOptions = [
+    { value: '5', label: 'Đã cấp mã hóa đơn' },
+    { value: '6', label: 'Tổng cục thuế đã nhận không mã' },
+    { value: '8', label: 'Tổng cục thuế đã nhận hóa đơn có mã khởi tạo từ máy tính tiền' },
+]
+const invoiceTypeOptions = [
+    { label: 'Bán ra', value: 'sold' },
+    { label: 'Mua vào', value: 'purchase' },
+]
+
+const invoiceKindOptions = [
+    { label: 'Hóa đơn điện tử', value: InvoiceKind.normal },
+    { label: 'Hóa đơn có mã khởi tạo từ máy tính tiền', value: InvoiceKind.sco },
+]
+
+type InputSchema = {
+    type: InvoiceType
+    ttxly: string
+    kind: InvoiceKind
+}
+
+const schema = z.object({
+    type: z.enum([invoiceTypeOptions[0].value, invoiceTypeOptions[1].value]),
+    ttxly: z.enum([ttxlyOptions[0].value, ttxlyOptions[1].value, ttxlyOptions[2].value]),
+    kind: z.nativeEnum(InvoiceKind),
+})
+
+const initData = {
+    type: invoiceTypeOptions[0].value as InvoiceType,
+    ttxly: ttxlyOptions[0].value,
+    kind: invoiceKindOptions[0].value as InvoiceKind,
 }
 
 export default function Home() {
     const router = useRouter()
     const [percent, setPercent] = useState('0')
-    const [disableGetData, setDisableGetData] = useState(false)
     const [fromDate, setFromDate] = useState<Dayjs | null>()
     const [toDate, setToDate] = useState<Dayjs | null>()
     const [open, setOpen] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
     const [user, setUser] = useState('')
-    const [invoiceType, setInvoiceType] = useState<InvoiceType>('sold')
-    const [ttxly, setTtxly] = useState<string>(ttxlyMap.first.value)
-    const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>(InvoiceKind.normal)
     const [totalInvoice, setTotalInvoice] = useState(0)
+
+    const {
+        watch,
+        handleSubmit,
+        formState: { isSubmitting },
+        control,
+    } = useForm<InputSchema>({
+        resolver: zodResolver(schema),
+        defaultValues: initData,
+    })
+
+    const isPurchaseType = watch('type') === 'purchase'
 
     useEffect(() => {
         const userName = Cookies.get('username')
@@ -60,20 +91,20 @@ export default function Home() {
     }
 
     // handle download data
-    const getData = async (invoiceType: InvoiceType) => {
+    const onSubmit = async (data: InputSchema) => {
+        console.log('data', data)
         if (!fromDate || !toDate) {
             handleError('Vui lòng chọn ngày')
             return
         }
         const startDate = getStartDate(fromDate?.format('DD-MM-YYYY') || '')
         const endDate = getEndDate(toDate?.format('DD-MM-YYYY') || '')
-        setDisableGetData(true)
         updateTotalInvoice(0)
         try {
             const input = {
-                type: invoiceType,
-                kind: invoiceKind,
-                ttxly,
+                type: data.type,
+                kind: data.kind,
+                ttxly: data.ttxly,
                 startDate,
                 endDate,
                 updatePercent,
@@ -89,8 +120,6 @@ export default function Home() {
         } catch (error: any) {
             console.log(error)
             handleError(error.response?.data?.message)
-        } finally {
-            setDisableGetData(false)
         }
     }
 
@@ -122,22 +151,6 @@ export default function Home() {
         return false
     }
 
-    const handleChangeInvoiceType = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setInvoiceType(event.target.value as InvoiceType)
-    }
-
-    const handleChangeCheckType = (event: SelectChangeEvent): any => {
-        setTtxly(event.target.value)
-    }
-
-    const handleChangeInvoiceKind = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setInvoiceKind(Number(event.target.value) as InvoiceKind)
-    }
-
-    const handleGetData = () => {
-        getData(invoiceType)
-    }
-
     return (
         <Container
             sx={{
@@ -158,72 +171,55 @@ export default function Home() {
                         <PiSignOutFill color="#1976D2" size={32} style={{ cursor: 'pointer' }} onClick={handleLogout} />
                     </Box>
                 </Box>
-                <Stack spacing={4}>
-                    <Typography variant="h4">Lấy dữ liệu hóa đơn</Typography>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <Stack spacing={4}>
+                        <Typography variant="h4">Lấy dữ liệu hóa đơn</Typography>
+                        <RadioForm name="type" control={control} label="Loại hóa đơn" fullWidth row items={invoiceTypeOptions} />
 
-                    <FormControl>
-                        <FormLabel id="invoice-type">Loại hóa đơn</FormLabel>
-                        <RadioGroup row aria-labelledby="invoice-type" name="invoice-type" value={invoiceType} onChange={handleChangeInvoiceType}>
-                            <FormControlLabel value="sold" control={<Radio />} label="Bán ra" />
-                            <FormControlLabel value="purchase" control={<Radio />} label="Mua vào" />
-                        </RadioGroup>
-                    </FormControl>
+                        {isPurchaseType && <SelectForm name="ttxly" control={control} label="Kết quả kiểm tra" fullWidth items={ttxlyOptions} />}
 
-                    {invoiceType === 'purchase' && (
-                        <FormControl fullWidth>
-                            <InputLabel id="check-type">Kết quả kiểm tra</InputLabel>
-                            <Select labelId="check-type" id="check-type" value={ttxly} label="Kết quả kiểm tra" onChange={handleChangeCheckType}>
-                                <MenuItem value={ttxlyMap.first.value}>{ttxlyMap.first.label}</MenuItem>
-                                <MenuItem value={ttxlyMap.second.value}>{ttxlyMap.second.label}</MenuItem>
-                                <MenuItem value={ttxlyMap.third.value}>{ttxlyMap.third.label}</MenuItem>
-                            </Select>
-                        </FormControl>
-                    )}
+                        <DemoContainer components={['DatePicker']}>
+                            <DemoItem label="Từ ngày">
+                                <DatePicker
+                                    slotProps={{
+                                        field: {
+                                            clearable: true,
+                                        },
+                                    }}
+                                    shouldDisableDate={shouldDisableStartDate}
+                                    format="DD/MM/YYYY"
+                                    value={fromDate}
+                                    onChange={(v) => setFromDate(v)}
+                                />
+                            </DemoItem>
+                            <DemoItem label="Đến ngày">
+                                <DatePicker
+                                    slotProps={{
+                                        field: {
+                                            clearable: true,
+                                        },
+                                    }}
+                                    shouldDisableDate={shouldDisableEndDate}
+                                    format="DD/MM/YYYY"
+                                    value={toDate}
+                                    onChange={(v) => setToDate(v)}
+                                />
+                            </DemoItem>
+                        </DemoContainer>
 
-                    <DemoContainer components={['DatePicker']}>
-                        <DemoItem label="Từ ngày">
-                            <DatePicker
-                                slotProps={{
-                                    field: {
-                                        clearable: true,
-                                    },
-                                }}
-                                shouldDisableDate={shouldDisableStartDate}
-                                format="DD/MM/YYYY"
-                                value={fromDate}
-                                onChange={(v) => setFromDate(v)}
-                            />
-                        </DemoItem>
-                        <DemoItem label="Đến ngày">
-                            <DatePicker
-                                slotProps={{
-                                    field: {
-                                        clearable: true,
-                                    },
-                                }}
-                                shouldDisableDate={shouldDisableEndDate}
-                                format="DD/MM/YYYY"
-                                value={toDate}
-                                onChange={(v) => setToDate(v)}
-                            />
-                        </DemoItem>
-                    </DemoContainer>
+                        <RadioForm name="kind" control={control} fullWidth row items={invoiceKindOptions} />
 
-                    <RadioGroup row aria-labelledby="invoice-kind" name="invoice-kind" value={invoiceKind} onChange={handleChangeInvoiceKind}>
-                        <FormControlLabel value={InvoiceKind.normal} control={<Radio />} label="Hóa đơn điện tử" />
-                        <FormControlLabel value={InvoiceKind.sco} control={<Radio />} label="Hóa đơn có mã khởi tạo từ máy tính tiền" />
-                    </RadioGroup>
-
-                    <Button disabled={disableGetData} onClick={handleGetData} variant="outlined" size="large">
-                        Lấy dữ liệu
-                    </Button>
-                    {disableGetData && <LinearProgressWithLabel value={Number(percent)} />}
-                    {totalInvoice > 0 && (
-                        <Typography variant="body2" color="textSecondary">
-                            Tổng số hóa đơn: {totalInvoice}
-                        </Typography>
-                    )}
-                </Stack>
+                        <Button type="submit" disabled={isSubmitting} variant="outlined" size="large">
+                            Lấy dữ liệu
+                        </Button>
+                        {isSubmitting && <LinearProgressWithLabel value={Number(percent)} />}
+                        {totalInvoice > 0 && (
+                            <Typography variant="body2" color="textSecondary">
+                                Tổng số hóa đơn: {totalInvoice}
+                            </Typography>
+                        )}
+                    </Stack>
+                </form>
                 <ErrorDialog open={open} onClose={() => setOpen(false)} message={errorMessage} />
             </Box>
         </Container>
