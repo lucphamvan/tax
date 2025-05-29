@@ -61,9 +61,14 @@ const LoginPage = () => {
             Cookies.set('username', request.username, {
                 expires: 1,
             })
-            await axios.post('/api/login', authenInput)
+            const response = await axios.post('https://hoadondientu.gdt.gov.vn:30000/security-taxpayer/authenticate', authenInput)
+            const token = response.data.token
+            Cookies.set('token', token, {
+                expires: 1,
+            })
             router.push('/')
         } catch (error: any) {
+            console.error('Login error:', error)
             clearSession()
             handleOpenDialog(error.response?.data?.message)
             refreshCatpcha()
