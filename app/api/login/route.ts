@@ -10,6 +10,7 @@ export async function POST(request: Request) {
         const response = await axios.post('https://hoadondientu.gdt.gov.vn:30000/security-taxpayer/authenticate', data, {
             httpsAgent: agent,
         })
+        console.log('Response data:', response)
         const token = response.data.token
         cookies().set('token', token, {
             maxAge: 60 * 60 * 24,
